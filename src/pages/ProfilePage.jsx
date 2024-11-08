@@ -8,7 +8,7 @@ const ProfilePage = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [chatHistory, setChatHistory] = useState([]);
+  const [chatSessions, setChatSessions] = useState([]);
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
     home_mountain: '',
@@ -35,15 +35,21 @@ const ProfilePage = () => {
           bio: profileData?.bio || '',
         });
 
-        const { data: chatData, error: chatError } = await supabase
-          .from('chat_history')
-          .select('*')
+        const { data: sessionData, error: sessionError } = await supabase
+          .from('chat_sessions')
+          .select(`
+            *,
+            chat_messages!inner (
+              content,
+              role
+            )
+          `)
           .eq('user_id', user?.id)
-          .order('created_at', { ascending: false })
+          .order('last_message_at', { ascending: false })
           .limit(5);
 
-        if (chatError) throw chatError;
-        setChatHistory(chatData);
+        if (sessionError) throw sessionError;
+        setChatSessions(sessionData);
       } catch (error) {
         console.error('Error fetching profile:', error);
         alert('Error fetching profile data');
@@ -204,25 +210,38 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Chat History Card */}
+          {/* Chat History Card - Updated */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-medium text-gray-900 mb-6">Recent Conversations</h2>
             <div className="space-y-6">
-              {chatHistory.map((chat) => (
-                <div key={chat.id} className="bg-gray-50 rounded-lg p-4">
+              {chatSessions.map((session) => (
+                <div 
+                  key={session.id} 
+                  className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/chat/${session.id}`)}
+                >
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-medium text-gray-900">You asked:</p>
+                    <h3 className="text-sm font-medium text-gray-900">{session.title}</h3>
                     <span className="text-xs text-gray-500">
-                      {new Date(chat.created_at).toLocaleString()}
+                      {new Date(session.last_message_at).toLocaleString()}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-800 mb-4">{chat.user_message}</p>
-                  <div className="border-l-4 border-blue-500 pl-4">
-                    <p className="text-sm font-medium text-gray-900 mb-1">AI Response:</p>
-                    <p className="text-sm text-gray-800">{chat.ai_response}</p>
+                  {session.mountain && (
+                    <p className="text-xs text-gray-600 mb-2">
+                      Mountain: {session.mountain}
+                    </p>
+                  )}
+                  <div className="text-sm text-gray-800">
+                    {session.chat_messages[0]?.content.substring(0, 100)}...
                   </div>
                 </div>
               ))}
+              <button
+                onClick={() => navigate('/chat')}
+                className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Start New Chat
+              </button>
             </div>
           </div>
         </div>

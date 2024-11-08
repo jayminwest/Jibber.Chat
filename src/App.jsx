@@ -8,6 +8,7 @@ import SignInPage from './pages/SignInPage';
 import AuthCallback from './pages/AuthCallback';
 import HomePage from './pages/HomePage';
 import ChatPage from './pages/ChatPage';
+import ChatSessionPage from './pages/ChatSessionPage';
 import ProfilePage from './pages/ProfilePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
@@ -29,6 +30,14 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <ChatPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/chat/:sessionId" 
+                element={
+                  <ProtectedRoute>
+                    <ChatSessionPage />
                   </ProtectedRoute>
                 } 
               />

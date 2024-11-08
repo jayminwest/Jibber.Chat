@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../config/supabase';
 
 const ChatPage = () => {
   const { user } = useAuth();
@@ -8,23 +8,8 @@ const ChatPage = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedMountain, setSelectedMountain] = useState('');
-  const messagesEndRef = useRef(null);
-  const [conditions, setConditions] = useState({
-    temperature: '-5°C',
-    snowDepth: '150cm',
-    windSpeed: '10km/h'
-  });
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  useEffect(() => {
-    // Load chat history
     const loadChatHistory = async () => {
       try {
         const { data, error } = await supabase
@@ -58,14 +43,12 @@ const ChatPage = () => {
       const userMessage = inputMessage;
       setInputMessage('');
 
-      // Add user message to chat immediately
       setMessages(prev => [...prev, {
         text: userMessage,
         timestamp: new Date(),
         type: 'user'
       }]);
 
-      // Call Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('chat', {
         body: {
           message: userMessage,
@@ -76,39 +59,30 @@ const ChatPage = () => {
 
       if (error) throw error;
 
-      // Add AI response to chat
       setMessages(prev => [...prev, {
         text: data.response,
         timestamp: new Date(),
         type: 'ai'
       }]);
 
-      // Store in chat history
-      await supabase
-        .from('chat_history')
-        .insert([{
-          user_id: user.id,
-          user_message: userMessage,
-          ai_response: data.response,
-          mountain: selectedMountain,
-          created_at: new Date().toISOString()
-        }]);
-
     } catch (error) {
       console.error('Error sending message:', error);
-      alert('Failed to send message. Please try again.');
+      setMessages(prev => [...prev, {
+        text: `Error: ${error.message || 'Failed to send message. Please try again.'}`,
+        timestamp: new Date(),
+        type: 'error'
+      }]);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div className="fixed inset-0 pt-16">
+      <div className="h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-hidden">
+        <div className="h-full grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Mountain Selection */}
+          <div className="lg:col-span-1 h-fit">
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Mountain</h2>
               <select
@@ -122,31 +96,12 @@ const ChatPage = () => {
                 <option value="park-city">Park City</option>
               </select>
             </div>
-
-            {/* Conditions Card */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Current Conditions</h2>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-500">Temperature</p>
-                  <p className="text-lg font-medium text-gray-900">{conditions.temperature}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Snow Depth</p>
-                  <p className="text-lg font-medium text-gray-900">{conditions.snowDepth}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Wind Speed</p>
-                  <p className="text-lg font-medium text-gray-900">{conditions.windSpeed}</p>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Chat Section */}
-          <div className="lg:col-span-3">
-            <div className="bg-white rounded-xl shadow-sm h-[600px] flex flex-col">
-              {/* Chat Messages */}
+          <div className="lg:col-span-3 h-full flex flex-col">
+            <div className="flex-1 bg-white rounded-xl shadow-sm flex flex-col overflow-hidden">
+              {/* Chat Messages - Scrollable Area */}
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {messages.map((message, index) => (
                   <div key={index} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -156,22 +111,16 @@ const ChatPage = () => {
                         : 'bg-gray-100 text-gray-900'
                     }`}>
                       <p>{message.text}</p>
-                      {message.response && (
-                        <div className="mt-2 pt-2 border-t border-gray-200">
-                          <p className="text-sm text-gray-600">Response: {message.response}</p>
-                        </div>
-                      )}
                       <p className="text-xs mt-1 opacity-70">
                         {message.timestamp.toLocaleTimeString()}
                       </p>
                     </div>
                   </div>
                 ))}
-                <div ref={messagesEndRef} />
               </div>
 
-              {/* Input Area */}
-              <div className="border-t border-gray-200 p-4">
+              {/* Input Area - Fixed at bottom */}
+              <div className="border-t border-gray-200 p-4 bg-white">
                 <div className="flex space-x-4">
                   <input
                     type="text"

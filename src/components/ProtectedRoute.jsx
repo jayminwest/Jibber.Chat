@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../config/supabase';
+import { supabase } from '../lib/supabase';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();

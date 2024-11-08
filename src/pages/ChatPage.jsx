@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../config/supabase';
+import { supabase } from '../lib/supabase';
 
 const ChatPage = () => {
   const { user } = useAuth();
@@ -65,20 +65,16 @@ const ChatPage = () => {
         type: 'user'
       }]);
 
-      // Call your API endpoint
-      const response = await fetch('/api/chat/message', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Call Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke('chat', {
+        body: {
           message: userMessage,
           userId: user.id,
           mountain: selectedMountain
-        }),
+        }
       });
 
-      const data = await response.json();
+      if (error) throw error;
 
       // Add AI response to chat
       setMessages(prev => [...prev, {
@@ -86,6 +82,17 @@ const ChatPage = () => {
         timestamp: new Date(),
         type: 'ai'
       }]);
+
+      // Store in chat history
+      await supabase
+        .from('chat_history')
+        .insert([{
+          user_id: user.id,
+          user_message: userMessage,
+          ai_response: data.response,
+          mountain: selectedMountain,
+          created_at: new Date().toISOString()
+        }]);
 
     } catch (error) {
       console.error('Error sending message:', error);

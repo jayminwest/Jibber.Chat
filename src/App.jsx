@@ -10,7 +10,7 @@ import HomePage from './pages/HomePage';
 import ChatPage from './pages/ChatPage';
 import ProfilePage from './pages/ProfilePage';
 import ProtectedRoute from './components/ProtectedRoute';
-import PricingPage from './pages/PricingPage';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
 
 const App = () => {
   return (
@@ -33,7 +33,7 @@ const App = () => {
                 } 
               />
               <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/payment/success" element={<PaymentSuccessPage />} />
             </Routes>
           </main>
           <Footer />

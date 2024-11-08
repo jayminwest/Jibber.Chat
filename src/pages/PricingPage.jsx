@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../config/supabase';
 
 const PricingPage = () => {
   const navigate = useNavigate();
@@ -9,23 +8,32 @@ const PricingPage = () => {
 
   const handleSubscribe = async (plan) => {
     try {
-      // Update the user's subscription status
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          subscription_status: plan,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
+      if (!user) {
+        navigate('/login');
+        return;
+      }
 
-      if (error) throw error;
+      const response = await fetch('http://localhost:5000/api/payment/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          plan,
+          userId: user.id
+        }),
+      });
 
-      // In a real app, you would integrate with Stripe here
-      // For now, we'll just redirect to the chat page
-      navigate('/chat');
+      const { url } = await response.json();
+      
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('Failed to create checkout session');
+      }
     } catch (error) {
-      console.error('Error updating subscription:', error);
-      alert('Failed to update subscription. Please try again.');
+      console.error('Error initiating checkout:', error);
+      alert('Failed to start checkout process. Please try again.');
     }
   };
 
@@ -41,41 +49,7 @@ const PricingPage = () => {
           </p>
         </div>
 
-        <div className="mt-12 grid gap-8 lg:grid-cols-3 lg:gap-x-8">
-          {/* Free Plan */}
-          <div className="relative bg-white rounded-2xl shadow-sm flex flex-col">
-            <div className="p-8 text-center">
-              <h3 className="text-xl font-semibold text-gray-900">Basic</h3>
-              <p className="mt-4 text-gray-500">Perfect for casual skiers</p>
-              <p className="mt-8">
-                <span className="text-4xl font-bold text-gray-900">$0</span>
-                <span className="text-gray-500">/month</span>
-              </p>
-              <button
-                onClick={() => handleSubscribe('free')}
-                className="mt-8 block w-full bg-gray-50 py-3 px-6 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Get Started
-              </button>
-            </div>
-            <div className="flex-1 flex flex-col justify-between p-8 bg-gray-50 rounded-b-2xl">
-              <ul className="space-y-4">
-                <li className="flex items-center">
-                  <span className="text-green-500 mr-2">✓</span>
-                  Basic mountain conditions
-                </li>
-                <li className="flex items-center">
-                  <span className="text-green-500 mr-2">✓</span>
-                  Limited chat interactions
-                </li>
-                <li className="flex items-center">
-                  <span className="text-green-500 mr-2">✓</span>
-                  Single mountain access
-                </li>
-              </ul>
-            </div>
-          </div>
-
+        <div className="mt-12 grid gap-8 lg:grid-cols-2 lg:gap-x-8 max-w-4xl mx-auto">
           {/* Pro Plan */}
           <div className="relative bg-white rounded-2xl shadow-sm flex flex-col border-2 border-blue-600">
             <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
@@ -92,9 +66,9 @@ const PricingPage = () => {
               </p>
               <button
                 onClick={() => handleSubscribe('pro')}
-                className="mt-8 block w-full bg-blue-600 py-3 px-6 border border-transparent rounded-md text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="mt-8 block w-full bg-blue-600 py-3 px-6 border border-transparent rounded-md text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
               >
-                Subscribe
+                Get Started
               </button>
             </div>
             <div className="flex-1 flex flex-col justify-between p-8 bg-gray-50 rounded-b-2xl">
@@ -115,10 +89,6 @@ const PricingPage = () => {
                   <span className="text-green-500 mr-2">✓</span>
                   Personalized recommendations
                 </li>
-                <li className="flex items-center">
-                  <span className="text-green-500 mr-2">✓</span>
-                  Priority support
-                </li>
               </ul>
             </div>
           </div>
@@ -134,7 +104,7 @@ const PricingPage = () => {
               </p>
               <button
                 onClick={() => handleSubscribe('premium')}
-                className="mt-8 block w-full bg-gray-50 py-3 px-6 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="mt-8 block w-full bg-gray-50 py-3 px-6 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
               >
                 Subscribe
               </button>
@@ -160,6 +130,31 @@ const PricingPage = () => {
               </ul>
             </div>
           </div>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="mt-16 max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">
+            Frequently Asked Questions
+          </h2>
+          <dl className="space-y-8">
+            <div>
+              <dt className="text-lg font-medium text-gray-900">
+                Can I cancel my subscription?
+              </dt>
+              <dd className="mt-2 text-gray-500">
+                Yes, you can cancel your subscription at any time. You'll continue to have access until the end of your billing period.
+              </dd>
+            </div>
+            <div>
+              <dt className="text-lg font-medium text-gray-900">
+                What payment methods do you accept?
+              </dt>
+              <dd className="mt-2 text-gray-500">
+                We accept all major credit cards through our secure payment processor, Stripe.
+              </dd>
+            </div>
+          </dl>
         </div>
       </div>
     </div>
